@@ -4,6 +4,7 @@ import { User, Settings, Folder, Github, Instagram, Youtube, MessageCircle, Hear
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SpotlightCard from '../components/SpotlightCard';
+import { supabase } from '../lib/supabase';
 
 const Profile = () => {
     const { user, updateUserData } = useAuth();
