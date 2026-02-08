@@ -96,15 +96,36 @@ const WritePoem = () => {
 
                             {/* Tags Input */}
                             <div className="pt-8 border-t border-border">
-                                <div className="flex flex-wrap items-center gap-4">
-                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Atmosphere:</span>
-                                    <input
-                                        type="text"
-                                        value={tags}
-                                        onChange={(e) => setTags(e.target.value)}
-                                        className="flex-1 bg-muted/30 px-6 py-3 rounded-full border border-border text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all text-foreground"
-                                        placeholder="#nature, #midnight, #solitude"
-                                    />
+                                <div className="space-y-4">
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Atmosphere:</span>
+                                        <input
+                                            type="text"
+                                            value={tags}
+                                            onChange={(e) => setTags(e.target.value)}
+                                            className="flex-1 bg-muted/30 px-6 py-3 rounded-full border border-border text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all text-foreground"
+                                            placeholder="e.g. nature, love, midnight"
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2 px-1">
+                                        {['Classic', 'Love', 'Heartbreak', 'Nature', 'Dreams', 'Melancholy', 'Peace', 'Quotes', 'Limericks', 'Life', 'Hope', 'Soul'].map(suggestion => (
+                                            <button
+                                                key={suggestion}
+                                                type="button"
+                                                onClick={() => {
+                                                    const s = suggestion.toLowerCase();
+                                                    const currentTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
+                                                    if (!currentTags.includes(s)) {
+                                                        setTags(tags ? `${tags}, ${s}` : s);
+                                                    }
+                                                }}
+                                                className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-muted-foreground hover:border-primary/40 hover:text-primary transition-all uppercase tracking-wider"
+                                            >
+                                                +{suggestion}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>

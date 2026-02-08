@@ -164,11 +164,72 @@
     background-color: oklch(from var(--muted) l c h / 0.4);
   }
 
-  .bg-pastel-green {
-    background-color: oklch(from var(--primary) l c h / 0.05);
+  /* Site-wide Premium Hover Interaction */
+  .cursor-pointer,
+  button,
+  a,
+  .spotlight-card {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .cursor-pointer:hover,
+  button:hover,
+  a:hover {
+    filter: brightness(1.15);
+  }
+
+  /* Global Poem Card Hover Logic */
+  .spotlight-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition:
+      transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+      filter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spotlight-card:hover {
+    transform: translateY(-8px) scale(1.015);
+    box-shadow:
+      0 30px 60px -12px rgba(0, 0, 0, 0.6),
+      0 0 30px 4px oklch(from var(--primary) l c h / 0.15);
+    z-index: 50;
+  }
+
+  .bg-pastel-green,
+  .bg-pastel-mint {
+    background-color: oklch(0.96 0.03 160 / 0.15);
+  }
+
+  .bg-dusty-rose {
+    background-color: oklch(0.5 0.03 15);
+  }
+
+  .bg-sage-green {
+    background-color: oklch(0.53 0.03 145);
+  }
+
+  .bg-pale-lavender {
+    background-color: oklch(0.5 0.03 285);
+  }
+
+  .bg-muted-sand {
+    background-color: oklch(0.53 0.03 85);
+  }
+
+  /* Text Contrast for Pastels */
+  .text-pastel-contrast {
+    color: oklch(0.98 0.01 85);
   }
 
   /* Dark Mode Variants */
+  .dark .bg-pastel-green,
+  .dark .bg-pastel-mint {
+    background-color: oklch(0.35 0.02 160 / 0.3);
+  }
+
   .dark .bg-pastel-purple {
     background-color: oklch(from var(--card) l c h / 0.6);
   }
@@ -208,6 +269,32 @@
 
   .dark .text-gray-500 {
     color: oklch(from var(--muted-foreground) l c h / 0.6);
+  }
+
+  /* Bloom Glow Effect */
+  .bloom-glow {
+    box-shadow:
+      0 0 15px oklch(from var(--primary) l c h / 0.3),
+      0 0 30px oklch(from var(--primary) l c h / 0.15),
+      0 0 60px oklch(from var(--primary) l c h / 0.07);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bloom-glow:hover {
+    box-shadow:
+      0 0 25px oklch(from var(--primary) l c h / 0.5),
+      0 0 50px oklch(from var(--primary) l c h / 0.3),
+      0 0 100px oklch(from var(--primary) l c h / 0.15);
+  }
+
+  /* Minimalist Divider */
+  .minimal-divider {
+    border: none;
+    height: 1px;
+    background-color: #333333;
+    margin: 60px auto;
+    width: 100%;
+    opacity: 0.3;
   }
 }
 

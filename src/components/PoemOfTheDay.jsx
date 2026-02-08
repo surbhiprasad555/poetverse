@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Quote } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 const PoemOfTheDay = () => {
     return (
@@ -27,18 +27,17 @@ const PoemOfTheDay = () => {
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-accent/20 rounded-full blur-3xl opacity-50"></div>
                     <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-50"></div>
 
-                    <Quote className="absolute top-8 left-8 text-primary/10 w-12 h-12 -z-10 opacity-50" />
 
                     <div className="text-center max-w-2xl mx-auto relative z-10">
                         <h3 className="text-2xl font-serif font-bold text-foreground mb-6">
                             Canvas of Tomorrow
                         </h3>
 
-                        <div className="font-serif text-lg md:text-xl text-foreground/80 leading-relaxed italic mb-8">
-                            "The brush strokes land<br />
+                        <div className="font-serif text-lg md:text-xl text-foreground/90 leading-relaxed mb-8">
+                            The brush strokes land<br />
                             Upon the canvas of the sky<br />
                             Colors blending, soft and grand<br />
-                            As clouds drift slowly by..."
+                            As clouds drift slowly by...
                         </div>
 
                         <div className="flex flex-col items-center justify-center space-y-2">

@@ -374,8 +374,8 @@ const Profile = () => {
                                                             {new Date(poem.createdAt).toLocaleDateString()}
                                                         </span>
                                                     </div>
-                                                    <p className="font-serif italic text-foreground/80 whitespace-pre-line flex-grow text-lg mb-8 leading-relaxed">
-                                                        "{poem.content}"
+                                                    <p className="font-serif text-foreground/80 whitespace-pre-line flex-grow text-lg mb-8 leading-relaxed">
+                                                        {poem.content}
                                                     </p>
                                                     <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-between items-center bg-gradient-to-t from-background/20 to-transparent">
                                                         <div className="flex space-x-4">
