@@ -23,6 +23,7 @@ const AppContent = () => {
                     <Route path="/" element={<Home />} />
                     <Route path="/tag/:tagName" element={<Home />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/profile/:userId" element={<Profile />} />
                     <Route path="/write" element={<WritePoem />} />
                     <Route path="/auth" element={<Auth />} />
 

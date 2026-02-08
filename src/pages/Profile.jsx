@@ -2,17 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Settings, Folder, Github, Instagram, Youtube, MessageCircle, Heart, FolderPlus, Trash2, Edit3, Camera, Link as LinkIcon, AtSign, Share2, Users, Check, X, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import SpotlightCard from '../components/SpotlightCard';
 import { supabase } from '../lib/supabase';
 
 const Profile = () => {
-    const { user, updateUserData } = useAuth();
+    const { userId } = useParams();
+    const { user: currentUser, updateUserData } = useAuth();
     const navigate = useNavigate();
+
+    const [profile, setProfile] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [activeTab, setActiveTab] = useState('poems'); // poems, followers, following
+    const [activeTab, setActiveTab] = useState('poems');
     const [myPoems, setMyPoems] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [followersCount, setFollowersCount] = useState(0);
+    const [followingCount, setFollowingCount] = useState(0);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followers, setFollowers] = useState([]);
+    const [following, setFollowing] = useState([]);
+
+    const isOwnProfile = !userId || userId === currentUser?.id;
+    const targetUserId = userId || currentUser?.id;
 
     // Edit Form State
     const [editForm, setEditForm] = useState({
@@ -29,43 +40,130 @@ const Profile = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (!user) {
-            navigate('/auth');
+        if (!targetUserId) {
+            if (!currentUser && !loading) navigate('/auth');
             return;
         }
 
-        setEditForm({
-            displayName: user.displayName || '',
-            username: user.username || '',
-            bio: user.bio || '',
-            instagram: user.socialLinks?.instagram || '',
-            youtube: user.socialLinks?.youtube || '',
-            discord: user.socialLinks?.discord || '',
-            profilePic: user.profilePic || '',
-            bannerPic: user.bannerPic || ''
-        });
-
-        const fetchMyPoems = async () => {
-            if (!user) return;
+        const fetchProfileData = async () => {
             setLoading(true);
             try {
-                const { data, error } = await supabase
+                // Fetch profile
+                const { data: profileData, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', targetUserId)
+                    .single();
+
+                if (profileError) throw profileError;
+                setProfile(profileData);
+
+                if (isOwnProfile) {
+                    setEditForm({
+                        displayName: profileData.display_name || '',
+                        username: profileData.username || '',
+                        bio: profileData.bio || '',
+                        instagram: profileData.social_links?.instagram || '',
+                        youtube: profileData.social_links?.youtube || '',
+                        discord: profileData.social_links?.discord || '',
+                        profilePic: profileData.profile_pic || '',
+                        bannerPic: profileData.banner_pic || ''
+                    });
+                }
+
+                // Fetch poems
+                const { data: poemsData, error: poemsError } = await supabase
                     .from('poems')
                     .select('*')
-                    .eq('author_id', user.id)
+                    .eq('author_id', targetUserId)
                     .order('created_at', { ascending: false });
 
-                if (error) throw error;
-                setMyPoems(data || []);
+                if (poemsError) throw poemsError;
+                setMyPoems(poemsData || []);
+
+                // Fetch Followers
+                const { data: fData, error: fError } = await supabase
+                    .from('follows')
+                    .select('follower:profiles!follower_id(*)')
+                    .eq('following_id', targetUserId);
+
+                if (!fError) {
+                    setFollowers(fData.map(item => item.follower));
+                    setFollowersCount(fData.length);
+                }
+
+                // Fetch Following
+                const { data: flData, error: flError } = await supabase
+                    .from('follows')
+                    .select('following:profiles!following_id(*)')
+                    .eq('follower_id', targetUserId);
+
+                if (!flError) {
+                    setFollowing(flData.map(item => item.following));
+                    setFollowingCount(flData.length);
+                }
+
+                // Check if current user follows this person
+                if (currentUser && !isOwnProfile) {
+                    const { data: followData } = await supabase
+                        .from('follows')
+                        .select('*')
+                        .eq('follower_id', currentUser.id)
+                        .eq('following_id', targetUserId)
+                        .single();
+
+                    setIsFollowing(!!followData);
+                }
+
             } catch (error) {
-                console.error("Error fetching my poems:", error.message);
+                console.error("Error fetching profile data:", error.message);
+                if (error.code === 'PGRST116' && !isOwnProfile) {
+                    // Profile not found
+                    setError("This poet hasn't been found in our records.");
+                }
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchMyPoems();
-    }, [user, navigate]);
+        fetchProfileData();
+    }, [targetUserId, currentUser, isOwnProfile, navigate]);
+
+    const handleFollow = async () => {
+        if (!currentUser) {
+            navigate('/auth');
+            return;
+        }
+
+        try {
+            if (isFollowing) {
+                // Unfollow
+                const { error } = await supabase
+                    .from('follows')
+                    .delete()
+                    .eq('follower_id', currentUser.id)
+                    .eq('following_id', targetUserId);
+
+                if (error) throw error;
+                setFollowersCount(prev => Math.max(0, prev - 1));
+                setIsFollowing(false);
+            } else {
+                // Follow
+                const { error } = await supabase
+                    .from('follows')
+                    .insert({
+                        follower_id: currentUser.id,
+                        following_id: targetUserId
+                    });
+
+                if (error) throw error;
+                setFollowersCount(prev => prev + 1);
+                setIsFollowing(true);
+            }
+        } catch (err) {
+            console.error("Follow action failed:", err.message);
+        }
+    };
 
     const handleFileChange = (e, type) => {
         const file = e.target.files[0];
@@ -95,7 +193,7 @@ const Profile = () => {
                         discord: editForm.discord
                     }
                 })
-                .eq('id', user.id)
+                .eq('id', currentUser.id)
                 .select()
                 .single();
 
@@ -124,7 +222,11 @@ const Profile = () => {
         }
     };
 
-    if (!user) return null;
+    if (loading && !profile) return <div className="pt-40 text-center font-serif italic opacity-50">The ink is flowing...</div>;
+    if (error && !isOwnProfile) return <div className="pt-40 text-center font-serif italic text-destructive">{error}</div>;
+
+    const displayUser = isOwnProfile ? currentUser : profile;
+    if (!displayUser) return null;
 
     return (
         <div className="pt-24 pb-20 min-h-screen bg-background transition-colors duration-300">
@@ -133,8 +235,8 @@ const Profile = () => {
                 <div className="bg-card rounded-[3rem] shadow-xl shadow-primary/5 dark:shadow-none overflow-hidden mb-10 border border-border transition-all">
                     {/* Banner */}
                     <div className="h-48 sm:h-64 relative group">
-                        {editForm.bannerPic || user.bannerPic ? (
-                            <img src={editForm.bannerPic || user.bannerPic} className="w-full h-full object-cover" alt="Banner" />
+                        {editForm.bannerPic || displayUser.banner_pic ? (
+                            <img src={editForm.bannerPic || displayUser.banner_pic} className="w-full h-full object-cover" alt="Banner" />
                         ) : (
                             <div className="w-full h-full bg-gradient-to-r from-primary/20 via-accent/20 to-secondary/20" />
                         )}
@@ -156,7 +258,7 @@ const Profile = () => {
                             <div className="relative group">
                                 <div className="p-2 bg-card rounded-[2.5rem] shadow-xl">
                                     <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-[2rem] overflow-hidden bg-muted">
-                                        <img src={editForm.profilePic || user.profilePic} className="w-full h-full object-cover" alt="Avatar" />
+                                        <img src={editForm.profilePic || displayUser.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayUser.username}`} className="w-full h-full object-cover" alt="Avatar" />
                                     </div>
                                 </div>
                                 {isEditing && (
@@ -183,12 +285,23 @@ const Profile = () => {
                                             Cancel
                                         </button>
                                     </>
-                                ) : (
+                                ) : isOwnProfile ? (
                                     <button
                                         onClick={() => setIsEditing(true)}
                                         className="px-8 py-3 bg-primary text-primary-foreground rounded-full font-bold shadow-lg shadow-primary/20 hover:-translate-y-1 transition-all flex items-center gap-2"
                                     >
                                         <Edit3 className="w-4 h-4" /> Edit Profile
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleFollow}
+                                        className={`px-10 py-3 rounded-full font-bold shadow-lg transition-all flex items-center gap-2 ${isFollowing ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground shadow-primary/20 hover:-translate-y-1'}`}
+                                    >
+                                        {isFollowing ? (
+                                            <><Check className="w-4 h-4" /> Following</>
+                                        ) : (
+                                            <><Users className="w-4 h-4" /> Follow Poet</>
+                                        )}
                                     </button>
                                 )}
                             </div>
@@ -269,29 +382,29 @@ const Profile = () => {
                                 ) : (
                                     <div className="space-y-4 text-center sm:text-left">
                                         <div>
-                                            <h1 className="text-4xl font-serif font-bold text-foreground">{user.displayName}</h1>
+                                            <h1 className="text-4xl font-serif font-bold text-foreground">{displayUser.display_name}</h1>
                                             <p className="text-primary font-bold flex items-center justify-center sm:justify-start gap-1 mt-1">
-                                                <AtSign className="w-4 h-4" /> {user.username}
+                                                <AtSign className="w-4 h-4" /> {displayUser.username}
                                             </p>
                                         </div>
                                         <p className="text-muted-foreground font-serif italic text-lg max-w-2xl whitespace-pre-line leading-relaxed">
-                                            "{user.bio}"
+                                            "{displayUser.bio || 'This poet prefers the silence of their own thoughts.'}"
                                         </p>
 
                                         {/* Social Links Display */}
                                         <div className="flex items-center justify-center sm:justify-start space-x-5 pt-2 font-medium">
-                                            {user.socialLinks?.instagram && (
-                                                <a href={user.socialLinks.instagram} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-pink-500 transition-all hover:scale-110 flex items-center gap-1.5">
+                                            {displayUser.social_links?.instagram && (
+                                                <a href={displayUser.social_links.instagram} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-pink-500 transition-all hover:scale-110 flex items-center gap-1.5">
                                                     <Instagram className="w-5 h-5" />
                                                 </a>
                                             )}
-                                            {user.socialLinks?.youtube && (
-                                                <a href={user.socialLinks.youtube} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-destructive transition-all hover:scale-110 flex items-center gap-1.5">
+                                            {displayUser.social_links?.youtube && (
+                                                <a href={displayUser.social_links.youtube} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-destructive transition-all hover:scale-110 flex items-center gap-1.5">
                                                     <Youtube className="w-5 h-5" />
                                                 </a>
                                             )}
-                                            {user.socialLinks?.discord && (
-                                                <a href={user.socialLinks.discord} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-all hover:scale-110 flex items-center gap-1.5">
+                                            {displayUser.social_links?.discord && (
+                                                <a href={displayUser.social_links.discord} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-all hover:scale-110 flex items-center gap-1.5">
                                                     <MessageCircle className="w-5 h-5" />
                                                 </a>
                                             )}
@@ -305,14 +418,14 @@ const Profile = () => {
                                     onClick={() => setActiveTab('followers')}
                                     className="text-center group"
                                 >
-                                    <span className="block text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent group-hover:scale-110 transition-transform">{user.followers?.length || 1240}</span>
+                                    <span className="block text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent group-hover:scale-110 transition-transform">{followersCount}</span>
                                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Followers</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('following')}
                                     className="text-center group"
                                 >
-                                    <span className="block text-3xl font-bold text-foreground group-hover:scale-110 transition-transform">{user.following?.length || 342}</span>
+                                    <span className="block text-3xl font-bold text-foreground group-hover:scale-110 transition-transform">{followingCount}</span>
                                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Following</span>
                                 </button>
                             </div>
@@ -427,22 +540,32 @@ const Profile = () => {
                             animate={{ opacity: 1, y: 0 }}
                             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
                         >
-                            {[1, 2, 3, 4, 5].map((item) => (
-                                <div key={item} className="flex items-center justify-between p-4 bg-card rounded-[2rem] border border-border shadow-sm hover:shadow-md transition-all group">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-primary/10 overflow-hidden">
-                                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item}`} alt="Avatar" />
+                            {((activeTab === 'followers' ? followers : following) || []).length > 0 ? (
+                                (activeTab === 'followers' ? followers : following).map((item) => (
+                                    <div
+                                        key={item?.id}
+                                        onClick={() => navigate(`/profile/${item?.id}`)}
+                                        className="flex items-center justify-between p-4 bg-card rounded-[2rem] border border-border shadow-sm hover:shadow-md transition-all group cursor-pointer"
+                                    >
+                                        <div className="flex items-center space-x-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-primary/10 overflow-hidden">
+                                                <img src={item?.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item?.username}`} alt="Avatar" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-foreground text-sm">{item?.display_name || 'Anonymous Poet'}</p>
+                                                <p className="text-xs text-muted-foreground tracking-wider">@{item?.username || 'muse'}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-foreground text-sm">Fellow Poet {item}</p>
-                                            <p className="text-xs text-muted-foreground tracking-wider">@poet_{item}</p>
+                                        <div className="p-3 bg-primary/10 text-primary rounded-2xl opacity-0 group-hover:opacity-100 transition-all">
+                                            <Users className="w-4 h-4" />
                                         </div>
                                     </div>
-                                    <button className="p-3 bg-primary/10 text-primary rounded-2xl opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-primary-foreground">
-                                        <Users className="w-4 h-4" />
-                                    </button>
+                                ))
+                            ) : (
+                                <div className="col-span-full py-20 text-center opacity-40 font-serif italic border-2 border-dashed border-border rounded-[3rem]">
+                                    No poets found in this circle yet...
                                 </div>
-                            ))}
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

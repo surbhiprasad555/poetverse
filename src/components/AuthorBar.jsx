@@ -1,4 +1,4 @@
-import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, MessageCircle, Share2, Heart } from 'lucide-react';
 
 /**
@@ -12,6 +12,7 @@ import { Sparkles, MessageCircle, Share2, Heart } from 'lucide-react';
  * - Interaction controls (Like, Comment, Share)
  */
 const AuthorBar = ({ author, tagline, likesCount, isAI }) => {
+    const navigate = useNavigate();
     // Robust data handling
     const displayName = isAI ? 'Poet AI' : (author?.display_name || (typeof author === 'string' ? author : 'The Muse'));
     const username = author?.username || (typeof author === 'string' ? author : 'muse');
@@ -23,7 +24,13 @@ const AuthorBar = ({ author, tagline, likesCount, isAI }) => {
     return (
         <div className="flex items-center justify-between w-full group/author-bar">
             {/* Author Profile Information */}
-            <div className="flex items-center space-x-3 group/author-info cursor-pointer overflow-hidden">
+            <div
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (author?.id) navigate(`/profile/${author.id}`);
+                }}
+                className="flex items-center space-x-3 group/author-info cursor-pointer overflow-hidden"
+            >
                 <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center overflow-hidden border border-white/10 shadow-inner transform group-hover/author-info:rotate-6 transition-all duration-300">
                     {isAI ? (
                         <Sparkles className="w-5 h-5 text-white" />
